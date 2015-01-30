@@ -145,6 +145,7 @@ display_versions() {
 #
 
 install_mongo() {
+  test -z $1 && abort "version not found"
   local version=$1; shift
   local config=$@
   check_current_version
@@ -437,8 +438,18 @@ execute_shell_with_version() {
 #
 
 display_latest_version() {
+    local LATEST_REGEX='[0-9]+\.[0-9]+\.[0-9]+([-_\.]rc[0-9]+)?'
+    if ! [ -z $1 ]; then
+        local MAJOR=`echo $1 | cut -d '.' -f 1`
+        local MINOR=`echo $1 | cut -d '.' -f 2`
+        if [[ $MAJOR =~ ^[0-9]+$ && $MINOR =~ ^[0-9]+$ ]]; then
+            LATEST_REGEX=$MAJOR\.$MINOR'\.[0-9]+([-_\.]rc[0-9]+)?'
+        else
+            abort "Version must be of the form A.B where A & B are integers"
+        fi
+    fi
   $GET 2> /dev/null http://dl.mongodb.org/dl/src/ \
-    | egrep -o '[0-9]+\.[0-9]+\.[0-9]+([-_\.]rc[0-9]+)?' \
+    | egrep -o $LATEST_REGEX \
     | sort -u -k 1,1n -k 2,2n -k 3,3n -t . \
     | tail -n1
 }
@@ -638,7 +649,7 @@ else
       as|use) shift; execute_with_version $@; exit ;;
       s|shell) shift; execute_shell_with_version $@; exit ;;
       rm) shift; remove_versions $@; exit ;;
-      latest) install_mongo `$0 --latest`; exit ;;
+      latest) install_mongo `$0 --latest $2`; exit ;;
       stable) install_mongo `$0 --stable`; exit ;;
       ls|list) list_versions $2; exit ;;
       c|custom) shift; install_tarball $@; exit ;;
