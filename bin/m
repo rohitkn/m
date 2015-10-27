@@ -155,12 +155,30 @@ install_mongo() {
     exit 0;
   fi
 
+  # the cp command behaves differently in linux vs osx when the destination exists
+  local arch=`uname -m`
+  local OS=`uname`
+  os=`echo $OS | tr '[:upper:]' '[:lower:]'`
+  local cpflag=;
+  case $os in
+    linux* )
+      os=linux
+      cpflag=-T
+      ;;
+    darwin* )
+      os=osx ;;
+    sunos* )
+      os=sunos5 ;;
+    * )
+      bin_not_supported $OS $version $config ;;
+  esac
+
   # activate
   local dir=$VERSIONS_DIR/$version
   if test -d $dir; then
     pre change
     cd $dir \
-      && cp -Rf $dir/bin/ $M_PREFIX/bin \
+      && cp -Rf $cpflag $dir/bin/ $M_PREFIX/bin \
       && post change
   # install
   else
@@ -217,25 +235,9 @@ install_bin() {
 
   # determine url based on os and arch
 
-  local arch=`uname -m`
-  local OS=`uname`
-  local os=`echo $OS | tr '[:upper:]' '[:lower:]'`
-
-  case $os in
-    linux* )
-      os=linux ;;
-    darwin* )
-      os=osx ;;
-    sunos* )
-      os=sunos5 ;;
-    * )
-      bin_not_supported $OS $version $config ;;
-  esac
-
   # check the download url
   local tarball="mongodb-$os-$arch-$version.tgz"
-  local url="http://fastdl.mongodb.org/$os/$tarball"
-
+  local url="http://fastdl.mongodb.org/$os/$tarball" 
   if ! good $url; then
     bin_not_supported $OS $version $config
     exit 0;
